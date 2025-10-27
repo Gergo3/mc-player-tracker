@@ -8,7 +8,7 @@ on:
 permissions:
   contents: read
   actions: read     # allow GitHub to run actions properly
-  gists: write
+  id-token: write
 
 jobs:
   track:
