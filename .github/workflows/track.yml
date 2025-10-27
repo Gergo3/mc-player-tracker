@@ -31,6 +31,6 @@ jobs:
           MC_SERVER_ADDRESS: ${{ secrets.MC_SERVER_ADDRESS }}
           GIST_ID: ${{ secrets.GIST_ID }}
           GIST_FILE: ${{ secrets.GIST_FILE }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GIST_TOKEN }}
         run: python track_players.py
 
