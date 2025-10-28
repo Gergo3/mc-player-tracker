@@ -124,6 +124,8 @@
     function updateChart(data) {
       const labels = data.map(d => new Date(d.time));
       const onlineData = data.map(d => d.online);
+      const playerNamesAtPoint = data.map(d => d.players.map(p => p.name));
+
 
       if (!chart) {
         const ctx = document.getElementById("player-chart").getContext("2d");
