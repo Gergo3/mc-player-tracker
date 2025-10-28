@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minecraft Server Stats</title>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Luxon for date parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/luxon@3.3.0/build/global/luxon.min.js"></script>
+  <!-- Chart.js Luxon adapter -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.1.0/dist/chartjs-adapter-luxon.min.js"></script>
+  <style>
+    body {
+      background-color: #1e1e1e;
+      color: #c0c0c0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 2rem;
+    }
+    h1 {
+      color: #10b981;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    .stats {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+    }
+    .card {
+      background-color: #2a2a2a;
+      padding: 1rem 2rem;
+      border-radius: 10px;
+      margin: 0.5rem;
+      min-width: 200px;
+      text-align: center;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+    .card h2 {
+      color: #10b981;
+      margin: 0.5rem 0;
+    }
+    #chart-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    ul {
+      list-style-type: none;
+      padding: 0;
+      margin: 0.5rem 0 0 0;
+    }
+    li {
+      color: #c0c0c0;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 2rem;
+      font-size: 0.9rem;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <h1>Minecraft Server Stats</h1>
+  <div class="stats">
+    <div class="card">
+      <h3>Players Online</h3>
+      <h2 id="online-count">0 / 0</h2>
+    </div>
+    <div class="card">
+      <h3>Last Updated</h3>
+      <h2 id="last-updated">--</h2>
+    </div>
+    <div class="card">
+      <h3>Current Players</h3>
+      <ul id="player-list"><li>None</li></ul>
+    </div>
+  </div>
+  <div id="chart-container">
+    <canvas id="player-chart"></canvas>
+  </div>
+
+  <script>
+    const GIST_URL = "https://gist.githubusercontent.com/__GITHUB_USERNAME__/__GIST_ID__/raw/__GIST_FILE__"; 
+    const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+    let chart;
+
+    async function fetchData() {
+      try {
+        const resp = await fetch(GIST_URL);
+        const data = await resp.json();
+
+
+        updateStats(data);
+        updateChart(data);
+	console.log(`[${new Date().toLocaleTimeString()}] Site updated from Gist`);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+      }
+    }
+
+    function updateStats(data) {
+      if (!data.length) return;
+      const latest = data[data.length - 1];
+      document.getElementById("online-count").textContent = `${latest.online} / ${latest.max}`;
+      const lastUpdated = new Date(latest.time);
+      document.getElementById("last-updated").textContent = lastUpdated.toLocaleString([], { hour12: false });
+      const playerList = document.getElementById("player-list");
+      playerList.innerHTML = "";
+      if (latest.players.length === 0) {
+        playerList.innerHTML = "<li>None</li>";
+      } else {
+        latest.players.forEach(p => {
+          const li = document.createElement("li");
+          li.textContent = p.name;
+          playerList.appendChild(li);
+        });
+      }
+    }
+
+    function updateChart(data) {
+      const labels = data.map(d => new Date(d.time));
+      const onlineData = data.map(d => d.online);
+
+      if (!chart) {
+        const ctx = document.getElementById("player-chart").getContext("2d");
+        chart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Players Online',
+              data: onlineData,
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.2)',
+              fill: true,
+              tension: 0.2,
+              pointRadius: 0
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                mode: 'index',
+                intersect: false,
+	        callbacks: {
+	          title: function(tooltipItems) {
+	            const date = new Date(tooltipItems[0].parsed.x);
+	            const hh = String(date.getHours()).padStart(2,'0');
+	            const mm = String(date.getMinutes()).padStart(2,'0');
+	            return `${hh}:${mm}`; // 24-hour format
+	          }
+	        }
+              }
+            },
+            scales: {
+              x: {
+                type: 'time',
+                time: { unit: 'hour', tooltipFormat: 'MMM d, h:mm' },
+		ticks: {
+		  color: '#c0c0c0',
+		  callback: function(value, index, ticks) {
+		    const date = new Date(value);
+		    return date.getHours().toString().padStart(2,'0') + ':' +
+			   date.getMinutes().toString().padStart(2,'0');
+		  }
+		},
+                grid: { color: '#333' }
+              },
+              y: {
+                beginAtZero: true,
+	        ticks: {
+	            color: '#c0c0c0',
+	            stepSize: 1       // <-- only whole numbers
+	        },
+                grid: { color: '#333' }
+              }
+            }
+          }
+        });
+      } else {
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = onlineData;
+        chart.update();
+      }
+    }
+
+    function logTimezone(){
+	// Print the client's timezone name
+	console.log("Client timezone:", Intl.DateTimeFormat().resolvedOptions().timeZone);
+
+	// Print the client's UTC offset in hours
+	const offsetHours = -new Date().getTimezoneOffset() / 60;
+	console.log("UTC offset (hours):", offsetHours);
+
+
+    }
+
+    logTimezone();
+    fetchData();
+    setInterval(fetchData, REFRESH_INTERVAL);
+  </script>
+</body>
+</html>
+

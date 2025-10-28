@@ -1,0 +1,43 @@
+name: Deploy Frontend to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Replace Gist ID placeholder
+        run: |
+          sed -i "s/__GIST_ID__/${{ secrets.GIST_ID }}/g" index.html
+
+      - name: Replace Gist FILE placeholder
+        run: |
+          sed -i "s/__GIST_FILE__/${{ secrets.GIST_FILE }}/g" index.html
+
+      - name: Replace GITHUB USERNAME placeholder
+        run: |
+          sed -i "s/__GITHUB_USERNAME__/${{ github.repository_owner }}/g" index.html
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "."
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
+
