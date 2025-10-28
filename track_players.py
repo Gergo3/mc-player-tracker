@@ -52,7 +52,7 @@ def update_gist(data):
     r.raise_for_status()
 
 def main():
-    now = datetime.datetime.utcnow().isoformat()
+    now = datetime.datetime.utcnow().isoformat() + "Z"
     ping_result = ping_server()
     if ping_result is None:
         print("Server ping failed, skipping update")
